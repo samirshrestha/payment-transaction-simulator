@@ -1,6 +1,6 @@
 # Terminal
 
-Simulates the payment terminal device: starts transactions (either standalone, operator-initiated, or relayed from POS), presents them to Host as ISO 8583/AS2805 messages over a TLS-secured TCP socket, and simulates the card-present flow (EMV) in between. Runs as an Android app (physical device or emulator).
+Simulates the payment terminal device: starts transactions (either standalone, operator-initiated, or relayed from POS), presents them to Host as ISO 8583/AS2805 messages over a TLS-secured TCP socket, and simulates the card-present flow (EMV) in between. Runs as an Android app (physical device or emulator). Acts as a TLS server for POS (POS connects into Terminal) and as a TLS client to Host (Terminal connects into Host) — one-way TLS in both directions.
 
 ## Language
 
@@ -64,3 +64,5 @@ Retries reuse the **same STAN** as the original attempt (never generate a new on
 **Future idea (not v1 scope):** network fallback for the Terminal↔Host link — if WiFi is down, fall back to a SIM/cellular connection. Would build on the transport already being pluggable; not designed yet.
 
 **Future idea (not v1 scope):** mutual TLS for Terminal↔Host (Terminal also presents a client certificate). v1 is one-way TLS only — see [ADR-0005](../docs/adr/0005-terminal-host-transport.md).
+
+**Future idea (not v1 scope):** mutual TLS for POS↔Terminal (POS also presents a client certificate). v1 is one-way TLS, Terminal as server — see [ADR-0006](../docs/adr/0006-pos-terminal-transport-security.md).
