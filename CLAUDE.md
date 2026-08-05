@@ -1,0 +1,76 @@
+\# Payment Transaction Simulator — Project Context
+
+
+
+\## Scope
+
+Simulates a payment transaction lifecycle (Terminal -> Host, with POS as an optional,
+
+later-arriving trigger — Terminal also supports standalone operator-initiated transactions)
+
+for demonstration purposes. Host-side logic implements the \*published\* ISO 8583/AS2805 standard (no
+
+employer-proprietary logic). Crypto/key handling (DUKPT/MAC/PIN block) and EMV logic are
+
+conceptual simulations for demonstration purposes — not production-grade or certified
+
+implementations. POS-facing schema is an original design, not modeled on any real
+
+POS-to-terminal protocol.
+
+
+
+\## Stack
+
+\- Host Simulator: pure Kotlin/JVM, runs as a TCP socket server (local or remote), one-way TLS
+
+\- Terminal App: Android, Jetpack Compose (not Compose Multiplatform) + Coroutines/Flow,
+
+&#x20; ViewModel/StateFlow, Hilt (DI), Navigation Compose, Material 3
+
+\- Terminal <-> Host transport: persistent TCP socket, one-way TLS (Terminal validates Host's
+
+&#x20; cert). Mutual TLS is a deferred stretch item, not core scope.
+
+\- POS <-> Terminal transport: pluggable interface, socket/WiFi implementation built first
+
+&#x20; (reflects real WiFi+Serial support at a past role). Serial via the usb-serial-for-android
+
+&#x20; library (CDC/ACM support) is a legitimate OPTIONAL stretch, not core scope — the API itself
+
+&#x20; is genuinely simple, but it needs real USB-to-serial hardware to test (unlike everything
+
+&#x20; else in this project) and doesn't deepen the Compose/Coroutines gap that's the actual point
+
+&#x20; of the Terminal App. Only build it if core scope is done with time to spare.
+
+\- POS Simulator: thin Kotlin/JVM client, console/CLI for v1 (Compose Multiplatform GUI is a
+
+&#x20; deferred stretch item, not core scope)
+
+
+
+\## Workflow
+
+\- Before implementing a new concept, briefly explain the underlying idea first, then implement.
+
+\- Discipline for every feature: propose an approach -> let me question/challenge it ->
+
+&#x20; implement -> add solid test coverage -> manual testing -> only then automate the PR step.
+
+
+
+\## Sequencing
+
+Host Simulator first, then Terminal App (standalone/operator-initiated mode first,
+
+POS integration after), then POS Simulator.
+
+
+
+Architecture decisions (module boundaries, tech choices): see \[CONTEXT-MAP.md](./CONTEXT-MAP.md),
+
+per-context \[CONTEXT.md](./host/CONTEXT.md) files, and \[docs/adr](./docs/adr) for the domain
+
+model and decisions captured in the first grilling/domain-modeling session.
+

@@ -1,0 +1,37 @@
+# Gradle
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+local.properties
+
+# Kotlin
+.kotlin/
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+.cxx/
+captures/
+/terminal/app/release/
+/terminal/app/debug/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS / cloud-sync junk
+desktop.ini
+Thumbs.db
+.DS_Store
+
+# Claude Code local settings (personal, not shared)
+.claude/settings.local.json
+
+# Logs
+*.log
