@@ -37,6 +37,7 @@ Captured as ADRs in [`docs/adr`](./docs/adr):
 - [0003](./docs/adr/0003-pos-facing-status-vocabulary.md) — POS receives a streamed, collapsed status vocabulary
 - [0004](./docs/adr/0004-floor-limit-offline-financial-advice.md) — Floor-limit offline approval with retried Advice/Reversal delivery
 - [0005](./docs/adr/0005-terminal-host-transport.md) — Terminal↔Host transport: TCP socket, one-way TLS
+- [0006](./docs/adr/0006-pos-terminal-transport-security.md) — POS↔Terminal transport security: one-way TLS, Terminal as server
 
 ## Tech stack
 

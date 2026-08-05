@@ -34,15 +34,19 @@ POS-to-terminal protocol.
 
 \- POS <-> Terminal transport: pluggable interface, socket/WiFi implementation built first
 
-&#x20; (reflects real WiFi+Serial support at a past role). Serial via the usb-serial-for-android
+&#x20; (reflects real WiFi+Serial support at a past role), one-way TLS (Terminal as server, POS
 
-&#x20; library (CDC/ACM support) is a legitimate OPTIONAL stretch, not core scope — the API itself
+&#x20; validates Terminal's cert). Mutual TLS is a deferred stretch item, not core scope. Serial via
 
-&#x20; is genuinely simple, but it needs real USB-to-serial hardware to test (unlike everything
+&#x20; the usb-serial-for-android library (CDC/ACM support) is a legitimate OPTIONAL stretch, not
 
-&#x20; else in this project) and doesn't deepen the Compose/Coroutines gap that's the actual point
+&#x20; core scope — the API itself is genuinely simple, but it needs real USB-to-serial hardware to
 
-&#x20; of the Terminal App. Only build it if core scope is done with time to spare.
+&#x20; test (unlike everything else in this project) and doesn't deepen the Compose/Coroutines gap
+
+&#x20; that's the actual point of the Terminal App. Only build it if core scope is done with time to
+
+&#x20; spare.
 
 \- POS Simulator: thin Kotlin/JVM client, console/CLI for v1 (Compose Multiplatform GUI is a
 
