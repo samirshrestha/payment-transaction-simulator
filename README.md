@@ -52,6 +52,8 @@ Single multi-module Gradle build (`:host`, `:terminal`, `:pos`).
 
 Domain modeling and architecture planning complete (see ADRs above). Implementation is sequenced **Host → Terminal (standalone mode first, POS integration after) → POS Simulator**, per [`CLAUDE.md`](./CLAUDE.md). Build/run instructions will be added here as each module lands.
 
+Work is tracked as [GitHub Issues](https://github.com/samirshrestha/payment-transaction-simulator/issues) and on the [Project board](https://github.com/users/samirshrestha/projects/1).
+
 ## License
 
 [MIT](./LICENSE)

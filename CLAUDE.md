@@ -74,3 +74,31 @@ per-context \[CONTEXT.md](./host/CONTEXT.md) files, and \[docs/adr](./docs/adr) 
 
 model and decisions captured in the first grilling/domain-modeling session.
 
+
+
+\## Agent skills
+
+
+
+\### Issue tracker
+
+
+
+Issues and specs live as GitHub issues in \`samirshrestha/payment-transaction-simulator\` (uses the \`gh\` CLI). See \`docs/agents/issue-tracker.md\`.
+
+
+
+\### Triage labels
+
+
+
+Default five canonical labels (\`needs-triage\`, \`needs-info\`, \`ready-for-agent\`, \`ready-for-human\`, \`wontfix\`). See \`docs/agents/triage-labels.md\`.
+
+
+
+\### Domain docs
+
+
+
+Multi-context — \[CONTEXT-MAP.md](./CONTEXT-MAP.md) plus one \`CONTEXT.md\` per context (\`host/\`, \`terminal/\`, \`pos/\`). See \`docs/agents/domain.md\`.
+
