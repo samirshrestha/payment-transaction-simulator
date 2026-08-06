@@ -38,6 +38,7 @@ Captured as ADRs in [`docs/adr`](./docs/adr):
 - [0004](./docs/adr/0004-floor-limit-offline-financial-advice.md) — Floor-limit offline approval with retried Advice/Reversal delivery
 - [0005](./docs/adr/0005-terminal-host-transport.md) — Terminal↔Host transport: TCP socket, one-way TLS
 - [0006](./docs/adr/0006-pos-terminal-transport-security.md) — POS↔Terminal transport security: one-way TLS, Terminal as server
+- [0007](./docs/adr/0007-terminal-module-split.md) — Terminal splits into domain/data/ui/app Gradle modules
 
 ## Tech stack
 
@@ -47,7 +48,7 @@ Captured as ADRs in [`docs/adr`](./docs/adr):
 | Terminal App | Android, Jetpack Compose, Coroutines/Flow, ViewModel/StateFlow, Hilt, Navigation Compose, Material 3 |
 | POS Simulator | Thin Kotlin/JVM console/CLI client |
 
-Single multi-module Gradle build (`:host`, `:terminal`, `:pos`).
+Single multi-module Gradle build. Host and POS are each one module (`:host`, `:pos`); Terminal splits into four (`:terminal:domain`, `:terminal:data`, `:terminal:ui`, `:terminal:app`) — a literal, browsable Clean Architecture layering, not just a described principle.
 
 ## Status
 

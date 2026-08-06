@@ -26,7 +26,11 @@ POS-to-terminal protocol.
 
 \- Terminal App: Android, Jetpack Compose (not Compose Multiplatform) + Coroutines/Flow,
 
-&#x20; ViewModel/StateFlow, Hilt (DI), Navigation Compose, Material 3
+&#x20; ViewModel/StateFlow, Hilt (DI), Navigation Compose, Material 3. Split into 4 Gradle modules
+
+&#x20; (\`:terminal:domain\`, \`:terminal:data\`, \`:terminal:ui\`, \`:terminal:app\`) — Host and POS stay
+
+&#x20; single modules, this split is Terminal-specific. See \[ADR-0007](./docs/adr/0007-terminal-module-split.md).
 
 \- Terminal <-> Host transport: persistent TCP socket, one-way TLS (Terminal validates Host's
 
