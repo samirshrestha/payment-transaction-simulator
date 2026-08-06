@@ -66,3 +66,5 @@ Retries reuse the **same STAN** as the original attempt (never generate a new on
 **Future idea (not v1 scope):** mutual TLS for Terminal↔Host (Terminal also presents a client certificate). v1 is one-way TLS only — see [ADR-0005](../docs/adr/0005-terminal-host-transport.md).
 
 **Future idea (not v1 scope):** mutual TLS for POS↔Terminal (POS also presents a client certificate). v1 is one-way TLS, Terminal as server — see [ADR-0006](../docs/adr/0006-pos-terminal-transport-security.md).
+
+**Future idea (not v1 scope):** split `:terminal` into submodules (e.g. `:terminal:engine` and `:terminal:app`) rather than one module with internal package/interface separation. The engine already has a clean seam from the UI by design (dependency inversion via `HostClient`/`CardReader`), so this would be a genuine but low-cost strengthening of module boundaries, not a redesign. Worth considering when building the Compose UI wiring ticket.

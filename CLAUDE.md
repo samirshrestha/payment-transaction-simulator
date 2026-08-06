@@ -62,6 +62,8 @@ POS-to-terminal protocol.
 
 &#x20; implement -> add solid test coverage -> manual testing -> only then automate the PR step.
 
+\- After a significant milestone, ask whether any external reference documents should be updated.
+
 
 
 \## Sequencing
@@ -88,7 +90,7 @@ model and decisions captured in the first grilling/domain-modeling session.
 
 
 
-Issues and specs live as GitHub issues in \`samirshrestha/payment-transaction-simulator\` (uses the \`gh\` CLI). See \`docs/agents/issue-tracker.md\`.
+Issues and specs live as GitHub issues in `samirshrestha/payment-transaction-simulator` (uses the `gh` CLI). See `docs/agents/issue-tracker.md`.
 
 
 
@@ -96,7 +98,7 @@ Issues and specs live as GitHub issues in \`samirshrestha/payment-transaction-si
 
 
 
-Default five canonical labels (\`needs-triage\`, \`needs-info\`, \`ready-for-agent\`, \`ready-for-human\`, \`wontfix\`). See \`docs/agents/triage-labels.md\`.
+Default five canonical labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
 
 
 
@@ -104,5 +106,5 @@ Default five canonical labels (\`needs-triage\`, \`needs-info\`, \`ready-for-age
 
 
 
-Multi-context — \[CONTEXT-MAP.md](./CONTEXT-MAP.md) plus one \`CONTEXT.md\` per context (\`host/\`, \`terminal/\`, \`pos/\`). See \`docs/agents/domain.md\`.
+Multi-context — \[CONTEXT-MAP.md](./CONTEXT-MAP.md) plus one `CONTEXT.md` per context (`host/`, `terminal/`, `pos/`). See `docs/agents/domain.md`.
 
