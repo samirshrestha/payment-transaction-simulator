@@ -67,6 +67,8 @@ Retries reuse the **same STAN** as the original attempt (never generate a new on
 
 **Future idea (not v1 scope):** mutual TLS for POS↔Terminal (POS also presents a client certificate). v1 is one-way TLS, Terminal as server — see [ADR-0006](../docs/adr/0006-pos-terminal-transport-security.md).
 
+**Future idea (not v1 scope):** a Store backend — a third actor beyond Host and POS, loosely modeled on the role Google Play plays for a real Android terminal — that Terminal authenticates to (OAuth client-credentials or device-authorization grant, since Terminal is a machine, not a human logging in) and pulls remote config from (e.g. Host endpoint, feature flags, trust anchors). Surfaced while assessing job-posting fit: v1's Terminal↔Host and POS↔Terminal links are both TLS-secured sockets with no token exchange, so this would be the first place OAuth shows up in the project. Not designed yet — would need its own CONTEXT.md if it goes beyond a stub.
+
 ## Module Structure
 
 `:terminal` splits into four Gradle modules: `:terminal:domain` (pure Kotlin/JVM — the engine, `TerminalState`, the `HostClient`/`CardReader`/`PosGateway` interfaces, retry/idempotency logic), `:terminal:data` (concrete implementations of those interfaces), `:terminal:ui` (Compose screens, ViewModel), `:terminal:app` (thin Android shell — DI wiring, `MainActivity`, manifest). Scoped to Terminal only — Host and POS stay single modules, since neither has the same layering to make literal. See [ADR-0007](../docs/adr/0007-terminal-module-split.md).
