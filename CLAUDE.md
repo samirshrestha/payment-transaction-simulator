@@ -68,6 +68,12 @@ POS-to-terminal protocol.
 
 \- After a significant milestone, ask whether any external reference documents should be updated.
 
+\- \*\*Future idea (not set up yet):\*\* branch protection on \`main\` — gate merges behind a free AI
+
+&#x20; code reviewer (e.g. CodeRabbit) and Snyk dependency/vulnerability scanning instead of merging
+
+&#x20; directly. Also CI/CD to build artifacts after a PR merges to \`main\`. Not designed yet.
+
 
 
 \## Sequencing
