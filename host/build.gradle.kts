@@ -26,5 +26,5 @@ tasks.test {
 // Google Drive sync leaves desktop.ini litter in every folder (see .gitignore); it isn't part of
 // this project's resources but Gradle's resource copying otherwise trips over it as a duplicate.
 tasks.withType<AbstractCopyTask>().configureEach {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("**/desktop.ini")
 }
