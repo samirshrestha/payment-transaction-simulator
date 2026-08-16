@@ -66,6 +66,18 @@ POS-to-terminal protocol.
 
 &#x20; implement -> add solid test coverage -> manual testing -> only then automate the PR step.
 
+\- Pairing split (agreed after ticket #5): mechanical scaffolding (build config, directory setup,
+
+&#x20; cert generation, boilerplate with no decisions in it) — agent does it outright, no discussion
+
+&#x20; needed. Anything with an actual design decision (algorithms, wire-format/protocol logic,
+
+&#x20; control flow, validation rules) — pair on it: agent explains the concept and proposes a
+
+&#x20; signature/failing-test shape, human writes the implementation, agent reviews/tests before the
+
+&#x20; next slice. One seam at a time, per the TDD discipline above.
+
 \- After a significant milestone, ask whether any external reference documents should be updated.
 
 \- \*\*Future idea (not set up yet):\*\* branch protection on \`main\` — gate merges behind a free AI
