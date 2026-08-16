@@ -9,6 +9,7 @@ object RequestCodec {
     fun encode(request: TransactionRequest): ByteArray {
         require(request.pan.length <= 99) { "PAN must fit the 2-digit LLVAR length prefix (DE2), was ${request.pan.length} digits" }
         require(request.stan.length <= 6) { "STAN must fit the fixed 6-digit field (DE11), was '${request.stan}'" }
+        require(request.amount in 0..999_999_999_999) { "Amount must fit the 12-digit field (DE4), was ${request.amount}" }
 
         val mti = Mti.request(request.type)
         val bitmap = Bitmap.of(2, 4, 11)

@@ -63,4 +63,37 @@ class RequestCodecTest {
 
         assertFailsWith<IllegalArgumentException> { RequestCodec.encode(request) }
     }
+
+    @Test
+    fun `refuses to encode Amount that exceeds 12-digit`() {
+        val request = TransactionRequest(
+            type = TransactionType.AUTHORIZATION,
+            stan = "123456",
+            pan = "4111111111111111",
+            amount = 1_000_000_000_000L
+        )
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.encode(request) }
+    }
+
+    @Test
+    fun `encodes Amount 999_999_999_999`() {
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000042",
+            pan = "5555555555554444",
+            amount = 999_999_999_999,
+        )
+
+        val encoded = RequestCodec.encode(request)
+
+        val expectedMti = "0200".toByteArray(Charsets.US_ASCII)
+        val expectedBitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0)
+        val expectedPan = "165555555555554444".toByteArray(Charsets.US_ASCII)
+        val expectedAmount = "999999999999".toByteArray(Charsets.US_ASCII)
+        val expectedStan = "000042".toByteArray(Charsets.US_ASCII)
+        val expected = expectedMti + expectedBitmap + expectedPan + expectedAmount + expectedStan
+
+        assertContentEquals(expected, encoded)
+    }
 }
