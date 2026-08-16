@@ -1,0 +1,66 @@
+package host.wire
+
+import host.domain.TransactionRequest
+import host.domain.TransactionType
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+
+class RequestCodecTest {
+
+    @Test
+    fun `decodes a well-formed Authorization request`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII) // LLVAR: 16-digit PAN
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII) // $123.45 in minor units
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        val request = RequestCodec.decode(message)
+
+        assertEquals(
+            TransactionRequest(
+                type = TransactionType.AUTHORIZATION,
+                stan = "000001",
+                pan = "4111111111111111",
+                amount = 12345L,
+            ),
+            request,
+        )
+    }
+
+    @Test
+    fun `encodes a Financial request onto the wire`() {
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000042",
+            pan = "5555555555554444",
+            amount = 500L,
+        )
+
+        val encoded = RequestCodec.encode(request)
+
+        val expectedMti = "0200".toByteArray(Charsets.US_ASCII)
+        val expectedBitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0)
+        val expectedPan = "165555555555554444".toByteArray(Charsets.US_ASCII)
+        val expectedAmount = "000000000500".toByteArray(Charsets.US_ASCII)
+        val expectedStan = "000042".toByteArray(Charsets.US_ASCII)
+        val expected = expectedMti + expectedBitmap + expectedPan + expectedAmount + expectedStan
+
+        assertContentEquals(expected, encoded)
+    }
+
+    @Test
+    fun `refuses to encode a STAN that doesn't fit the fixed 6-digit field`() {
+        val request = TransactionRequest(
+            type = TransactionType.AUTHORIZATION,
+            stan = "1234567",
+            pan = "4111111111111111",
+            amount = 100L,
+        )
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.encode(request) }
+    }
+}
