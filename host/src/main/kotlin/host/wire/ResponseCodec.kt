@@ -27,6 +27,8 @@ object ResponseCodec {
     }
 
     fun decode(bytes: ByteArray): TransactionResponse {
+        require(bytes.size == 20) { "Response must be exactly 20 bytes, was ${bytes.size}" }
+
         val mti = String(bytes, 0, 4, US_ASCII)
         val type = Mti.transactionType(mti)
         require(mti == Mti.response(type)) { "Expected response MTI ${Mti.response(type)} for $type, but got $mti" }

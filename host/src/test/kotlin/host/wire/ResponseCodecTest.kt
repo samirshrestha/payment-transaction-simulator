@@ -101,4 +101,26 @@ class ResponseCodecTest {
 
         assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
     }
+
+    @Test
+    fun `refuses to decode a response with trailing bytes`() {
+        val mti = "0110".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val responseCode = "00".toByteArray(Charsets.US_ASCII)
+        val trailingGarbage = byteArrayOf(0x7A, 0x7A) // 2 extra bytes nobody declared
+        val message = mti + bitmap + stan + responseCode + trailingGarbage
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a truncated response`() {
+        val mti = "0110".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan // missing the 2-byte response code entirely
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
 }
