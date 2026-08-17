@@ -16,7 +16,10 @@ internal data class Bitmap private constructor(private val fields: Set<Int>) {
     }
 
     companion object {
-        fun of(vararg fields: Int) = Bitmap(fields.toSet())
+        fun of(vararg fields: Int): Bitmap {
+            require(fields.all { it in 1..64}) { "Bitmap fields must be in 1..64, but was ${fields.contentToString()}"}
+            return Bitmap(fields.toSet())
+        }
 
         fun decode(bytes: ByteArray): Bitmap {
             require(bytes.size == 8) { "Primary bitmap must be exactly 8 bytes, was ${bytes.size}" }
