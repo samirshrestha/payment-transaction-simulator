@@ -78,13 +78,11 @@ POS-to-terminal protocol.
 
 &#x20; next slice. One seam at a time, per the TDD discipline above.
 
-\- After pushing changes to an open PR, trigger a CodeRabbit review by commenting
+\- If CodeRabbit hasn't reviewed an open PR automatically, request one by commenting
 
-&#x20; `@coderabbitai full review` (or `@coderabbitai review` for an incremental pass) — this repo
+&#x20; `@coderabbitai full review` (or `@coderabbitai review` for an incremental pass). Use
 
-&#x20; doesn't meet the star threshold for automatic review triggering. Mind the review quota
-
-&#x20; (plan-dependent, e.g. 1 per rolling hour) before re-triggering.
+&#x20; `@coderabbitai rate limit` before re-triggering when review capacity is uncertain.
 
 \- After a significant milestone, ask whether any external reference documents should be updated.
 
