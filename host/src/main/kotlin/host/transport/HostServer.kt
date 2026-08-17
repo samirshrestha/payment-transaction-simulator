@@ -22,6 +22,7 @@ class HostServer(
     private val processor: TransactionProcessor,
     keystoreResource: String = DevTls.KEYSTORE_RESOURCE,
     keystorePassword: String = DevTls.KEYSTORE_PASSWORD,
+    private val connectionTimeoutMillis: Int = 60_000,
 ) : AutoCloseable {
 
     private val serverSocket =
@@ -43,11 +44,15 @@ class HostServer(
     private fun acceptLoop() {
         while (!serverSocket.isClosed) {
             val client = try {
-                serverSocket.accept()
-            } catch (e: Exception) {
+                serverSocket.accept().apply { soTimeout = connectionTimeoutMillis }
+            } catch (_: Exception) {
                 break
             }
-            handleConnection(client)
+            try {
+                handleConnection(client)
+            } catch (e: Exception) {
+                println("Connection error: $e")
+            }
         }
     }
 
@@ -69,20 +74,24 @@ class HostServer(
                     output.write(responseBytes)
                     output.flush()
                 }
-            } catch (e: EOFException) {
+            } catch (_: EOFException) {
                 // client closed the connection
             }
         }
     }
 
     companion object {
-        private fun buildSslContext(keystoreResource: String, keystorePassword: String): SSLContext {
+        private fun buildSslContext(
+            keystoreResource: String,
+            keystorePassword: String
+        ): SSLContext {
             val keyStore = KeyStore.getInstance("PKCS12")
             val keystoreStream = HostServer::class.java.getResourceAsStream(keystoreResource)
                 ?: error("Keystore resource not found: $keystoreResource")
             keystoreStream.use { stream -> keyStore.load(stream, keystorePassword.toCharArray()) }
 
-            val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+            val keyManagerFactory =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
             keyManagerFactory.init(keyStore, keystorePassword.toCharArray())
 
             return SSLContext.getInstance("TLS").apply {
