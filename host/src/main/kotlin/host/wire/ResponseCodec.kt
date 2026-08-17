@@ -8,8 +8,12 @@ object ResponseCodec {
     private const val APPROVED_CODE = "00"
     private const val DECLINED_CODE = "05"
 
+    private val ALLOWED_RESPONSE_CODES = listOf(APPROVED_CODE, DECLINED_CODE)
+    private val stanPatternRegEx = Regex("[0-9]{1,6}")   // input side: 1-6 digits, before padding
+    private val stanFieldRegEx = Regex("[0-9]{6}")        // wire side: exactly 6 digits
+
     fun encode(response: TransactionResponse): ByteArray {
-        require(response.stan.length <= 6) { "STAN must fit the fixed 6-digit field (DE11), was '${response.stan}'" }
+        require(stanPatternRegEx.matches(response.stan)) { "STAN must fit the fixed 6-digit only field (DE11), was '${response.stan}'" }
 
         val mti = Mti.response(response.type)
         val bitmap = Bitmap.of(11, 39)
@@ -17,24 +21,30 @@ object ResponseCodec {
         val responseCodeField = if (response.approved) APPROVED_CODE else DECLINED_CODE
 
         return mti.toByteArray(US_ASCII) +
-            bitmap.toBytes() +
-            stanField.toByteArray(US_ASCII) +
-            responseCodeField.toByteArray(US_ASCII)
+                bitmap.toBytes() +
+                stanField.toByteArray(US_ASCII) +
+                responseCodeField.toByteArray(US_ASCII)
     }
 
     fun decode(bytes: ByteArray): TransactionResponse {
         val mti = String(bytes, 0, 4, US_ASCII)
         val type = Mti.transactionType(mti)
+        require(mti == Mti.response(type)) { "Expected response MTI ${Mti.response(type)} for $type, but got $mti" }
         val bitmap = Bitmap.decode(bytes.copyOfRange(4, 12))
+        require(bitmap == Bitmap.of(11, 39)) { "Unexpected fields found in bitmap $bitmap" }
         var offset = 12
 
-        require(bitmap.contains(11)) { "DE11 (STAN) missing from response bitmap" }
         val stan = String(bytes, offset, 6, US_ASCII)
+        require(stanFieldRegEx.matches(stan)) { "STAN must be 6 digit value, was $stan" }
         offset += 6
 
-        require(bitmap.contains(39)) { "DE39 (response code) missing from response bitmap" }
         val responseCode = String(bytes, offset, 2, US_ASCII)
+        require(responseCode in ALLOWED_RESPONSE_CODES) { "Unrecognized response code set, $responseCode" }
 
-        return TransactionResponse(type = type, stan = stan, approved = responseCode == APPROVED_CODE)
+        return TransactionResponse(
+            type = type,
+            stan = stan,
+            approved = responseCode == APPROVED_CODE
+        )
     }
 }

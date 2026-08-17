@@ -46,4 +46,59 @@ class ResponseCodecTest {
 
         assertFailsWith<IllegalArgumentException> { ResponseCodec.encode(response) }
     }
+
+    @Test
+    fun `refuses to encode a non-numeric STAN`() {
+        val response = TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "12a456", approved = true)
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.encode(response) }
+    }
+
+    @Test
+    fun `refuses to decode a non-numeric STAN`() {
+        val mti = "0110".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "12a456".toByteArray(Charsets.US_ASCII)
+        val responseCode = "00".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan + responseCode
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode unrecognized response code` () {
+        val mti = "0110".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val responseCode = "XX".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan + responseCode
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a response with a request MTI`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII) // Authorization request, not response
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val responseCode = "00".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan + responseCode
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a response with unexpected field(s)`() {
+        val mti = "0110".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 0x06, 0, 0, 0) // DE11, DE38, DE39 present
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        // DE38, not a field this codec knows. Starts with "00" deliberately: if the bitmap-exactness
+        // check were missing, decode() would misread these bytes' first 2 chars as DE39 and they'd
+        // happen to equal APPROVED_CODE, masking the missing check behind the response-code guard.
+        val approvalCode = "00A1B2".toByteArray(Charsets.US_ASCII)
+        val responseCode = "00".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan + approvalCode + responseCode
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
 }
