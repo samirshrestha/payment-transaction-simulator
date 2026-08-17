@@ -1,7 +1,8 @@
 package host.wire
 
 /** ISO 8583 primary bitmap: one bit per data element 1-64, MSB-first within each byte. */
-internal class Bitmap private constructor(private val fields: Set<Int>) {
+@ConsistentCopyVisibility
+internal data class Bitmap private constructor(private val fields: Set<Int>) {
 
     fun contains(field: Int): Boolean = field in fields
 

@@ -96,4 +96,29 @@ class RequestCodecTest {
 
         assertContentEquals(expected, encoded)
     }
+
+    @Test
+    fun `refuses to decode Authorization request with bad-MTI`() {
+        val mti = "0110".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII) // LLVAR: 16-digit PAN
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII) // $123.45 in minor units
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode Financial request with unexpected field(s)`() {
+        val mti = "0200".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x52, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII) // LLVAR: 16-digit PAN
+        val transmissionDateTime = "0817081530".toByteArray(Charsets.US_ASCII) // 08/17 08:15:30
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII) // $123.45 in minor units
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + transmissionDateTime + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
 }
