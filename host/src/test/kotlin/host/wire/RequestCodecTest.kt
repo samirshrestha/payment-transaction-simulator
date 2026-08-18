@@ -215,4 +215,29 @@ class RequestCodecTest {
 
         assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
     }
+
+    @Test
+    fun `refuses to decode a request with a negative PAN length prefix`() {
+        // "-1" parses to panLength -1 via toInt(), making the expected-length arithmetic
+        // land on 31 bytes -- crafted here so the length check alone wouldn't catch it.
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val panLengthPrefix = "-1".toByteArray(Charsets.US_ASCII)
+        val rest = ByteArray(17) // 14 (header) + 17 = 31 bytes total
+        val message = mti + bitmap + panLengthPrefix + rest
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a request with a zero-length PAN prefix`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val panLengthPrefix = "00".toByteArray(Charsets.US_ASCII)
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII)
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + panLengthPrefix + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
 }

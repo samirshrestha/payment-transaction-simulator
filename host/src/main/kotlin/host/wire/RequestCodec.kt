@@ -54,7 +54,10 @@ object RequestCodec {
         val bitmap = Bitmap.decode(bytes.copyOfRange(BITMAP_OFFSET, PAN_LENGTH_PREFIX_OFFSET))
         require(bitmap == Bitmap.of(DE_2_PAN, DE_4_AMOUNT, DE_11_STAN)) { "Unexpected fields found in bitmap $bitmap" }
 
-        val panLength = String(bytes, PAN_LENGTH_PREFIX_OFFSET, PAN_LENGTH_PREFIX_LENGTH, US_ASCII).toInt()
+        val panLengthPrefix = String(bytes, PAN_LENGTH_PREFIX_OFFSET, PAN_LENGTH_PREFIX_LENGTH, US_ASCII)
+        requireAsciiDigits(panLengthPrefix, "PAN length prefix")
+        val panLength = panLengthPrefix.toInt()
+        require(panLength in 1..PAN_MAX_LENGTH) { "PAN length prefix must be between 1 and $PAN_MAX_LENGTH, was $panLength" }
         val panOffset = PAN_LENGTH_PREFIX_OFFSET + PAN_LENGTH_PREFIX_LENGTH
         val amountOffset = panOffset + panLength
         val stanOffset = amountOffset + AMOUNT_FIELD_LENGTH
