@@ -54,6 +54,16 @@ Single multi-module Gradle build. Host and POS are each one module (`:host`, `:p
 
 Domain modeling and architecture planning complete (see ADRs above). Implementation is sequenced **Host → Terminal (standalone mode first, POS integration after) → POS Simulator**, per [`CLAUDE.md`](./CLAUDE.md). Build/run instructions will be added here as each module lands.
 
+### Running the Host simulator
+
+```bash
+./gradlew host:run
+```
+
+Starts a standalone TCP socket server on port `8583`, terminating one-way TLS with a self-signed dev certificate (checked into the repo at `host/src/main/resources/tls/host-keystore.p12`, password `changeit`) — see [ADR-0005](./docs/adr/0005-terminal-host-transport.md). This cert is for local dev only; it's not a real trust chain and shouldn't be treated as one.
+
+Decisioning is currently a stub: every transaction is approved unconditionally. Real Account-based approve/decline logic (per [ADR-0001](./docs/adr/0001-simulated-account-store-for-host-decisioning.md)) hasn't landed yet.
+
 Work is tracked as [GitHub Issues](https://github.com/samirshrestha/payment-transaction-simulator/issues) and on the [Project board](https://github.com/users/samirshrestha/projects/1).
 
 ## License
