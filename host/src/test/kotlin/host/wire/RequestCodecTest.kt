@@ -121,4 +121,66 @@ class RequestCodecTest {
 
         assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
     }
+
+    @Test
+    fun `refuses to encode a PAN containing non-ASCII characters`() {
+        // Emoji is 2 UTF-16 code units but encodes to a single '?' byte in US_ASCII -- .length
+        // (16) wouldn't match the actual encoded byte count, corrupting the LLVAR length prefix.
+        val request = TransactionRequest(
+            type = TransactionType.AUTHORIZATION,
+            stan = "000001",
+            pan = "🎉11111111111111",
+            amount = 100L,
+        )
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.encode(request) }
+    }
+
+    @Test
+    fun `refuses to encode a non-numeric STAN`() {
+        val request = TransactionRequest(
+            type = TransactionType.AUTHORIZATION,
+            stan = "12a456",
+            pan = "4111111111111111",
+            amount = 100L,
+        )
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.encode(request) }
+    }
+
+    @Test
+    fun `refuses to decode a request with a non-numeric PAN`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "16111111111111111X".toByteArray(Charsets.US_ASCII) // LLVAR: 16 chars, last one non-digit
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII)
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a request with a negative amount`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII)
+        val amount = "-00000012345".toByteArray(Charsets.US_ASCII) // 12 bytes: sign + 11 digits; toLong() alone would accept this
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a request with a non-numeric STAN`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII)
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII)
+        val stan = "12a456".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
 }

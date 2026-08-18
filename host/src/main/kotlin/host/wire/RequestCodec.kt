@@ -6,7 +6,13 @@ import java.nio.charset.StandardCharsets.US_ASCII
 /** Translates between wire bytes and [TransactionRequest]: MTI + DE2 (PAN, LLVAR) + DE4 (amount) + DE11 (STAN). */
 object RequestCodec {
 
+    private fun requireAsciiDigits(value: String, field: String) {
+        require(value.isNotEmpty() && value.all { it in '0'..'9' }) { "$field must contain only ASCII decimal digits, was '$value'" }
+    }
+
     fun encode(request: TransactionRequest): ByteArray {
+        requireAsciiDigits(request.pan, "PAN")
+        requireAsciiDigits(request.stan, "STAN")
         require(request.pan.length <= 99) { "PAN must fit the 2-digit LLVAR length prefix (DE2), was ${request.pan.length} digits" }
         require(request.stan.length <= 6) { "STAN must fit the fixed 6-digit field (DE11), was '${request.stan}'" }
         require(request.amount in 0..999_999_999_999) { "Amount must fit the 12-digit field (DE4), was ${request.amount}" }
@@ -35,12 +41,16 @@ object RequestCodec {
         val panLength = String(bytes, offset, 2, US_ASCII).toInt()
         offset += 2
         val pan = String(bytes, offset, panLength, US_ASCII)
+        requireAsciiDigits(pan, "PAN")
         offset += panLength
 
-        val amount = String(bytes, offset, 12, US_ASCII).toLong()
+        val amountField = String(bytes, offset, 12, US_ASCII)
+        requireAsciiDigits(amountField, "Amount")
+        val amount = amountField.toLong()
         offset += 12
 
         val stan = String(bytes, offset, 6, US_ASCII)
+        requireAsciiDigits(stan, "STAN")
 
         return TransactionRequest(type = type, stan = stan, pan = pan, amount = amount)
     }
