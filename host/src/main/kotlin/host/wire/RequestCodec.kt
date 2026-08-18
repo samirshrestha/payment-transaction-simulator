@@ -5,6 +5,20 @@ import java.nio.charset.StandardCharsets.US_ASCII
 
 /** Translates between wire bytes and [TransactionRequest]: MTI + DE2 (PAN, LLVAR) + DE4 (amount) + DE11 (STAN). */
 object RequestCodec {
+    private const val DE_2_PAN = 2
+    private const val DE_4_AMOUNT = 4
+    private const val DE_11_STAN = 11
+
+    private const val MTI_LENGTH = 4
+    private const val BITMAP_LENGTH = 8
+    private const val PAN_LENGTH_PREFIX_LENGTH = 2
+    private const val PAN_MAX_LENGTH = 99 // largest value the 2-digit LLVAR prefix can express
+    private const val AMOUNT_FIELD_LENGTH = 12
+    private const val STAN_FIELD_LENGTH = 6
+
+    private const val BITMAP_OFFSET = MTI_LENGTH
+    private const val PAN_LENGTH_PREFIX_OFFSET = BITMAP_OFFSET + BITMAP_LENGTH
+    private const val MIN_MESSAGE_LENGTH = PAN_LENGTH_PREFIX_OFFSET + PAN_LENGTH_PREFIX_LENGTH
 
     private fun requireAsciiDigits(value: String, field: String) {
         require(value.isNotEmpty() && value.all { it in '0'..'9' }) { "$field must contain only ASCII decimal digits, was '$value'" }
@@ -13,15 +27,15 @@ object RequestCodec {
     fun encode(request: TransactionRequest): ByteArray {
         requireAsciiDigits(request.pan, "PAN")
         requireAsciiDigits(request.stan, "STAN")
-        require(request.pan.length <= 99) { "PAN must fit the 2-digit LLVAR length prefix (DE2), was ${request.pan.length} digits" }
-        require(request.stan.length <= 6) { "STAN must fit the fixed 6-digit field (DE11), was '${request.stan}'" }
+        require(request.pan.length <= PAN_MAX_LENGTH) { "PAN must fit the 2-digit LLVAR length prefix (DE2), was ${request.pan.length} digits" }
+        require(request.stan.length <= STAN_FIELD_LENGTH) { "STAN must fit the fixed 6-digit field (DE11), was '${request.stan}'" }
         require(request.amount in 0..999_999_999_999) { "Amount must fit the 12-digit field (DE4), was ${request.amount}" }
 
         val mti = Mti.request(request.type)
-        val bitmap = Bitmap.of(2, 4, 11)
-        val panField = request.pan.length.toString().padStart(2, '0') + request.pan
-        val amountField = request.amount.toString().padStart(12, '0')
-        val stanField = request.stan.padStart(6, '0')
+        val bitmap = Bitmap.of(DE_2_PAN, DE_4_AMOUNT, DE_11_STAN)
+        val panField = request.pan.length.toString().padStart(PAN_LENGTH_PREFIX_LENGTH, '0') + request.pan
+        val amountField = request.amount.toString().padStart(AMOUNT_FIELD_LENGTH, '0')
+        val stanField = request.stan.padStart(STAN_FIELD_LENGTH, '0')
 
         return mti.toByteArray(US_ASCII) +
                 bitmap.toBytes() +
@@ -31,25 +45,35 @@ object RequestCodec {
     }
 
     fun decode(bytes: ByteArray): TransactionRequest {
-        val mti = String(bytes, 0, 4, US_ASCII)
+        require(bytes.size >= MIN_MESSAGE_LENGTH) {
+            "Request must be at least $MIN_MESSAGE_LENGTH bytes to contain MTI, bitmap, and PAN length prefix, was ${bytes.size}"
+        }
+        val mti = String(bytes, 0, MTI_LENGTH, US_ASCII)
         val type = Mti.transactionType(mti)
         require(mti == Mti.request(type)) { "Expected request MTI ${Mti.request(type)} for $type, but got $mti" }
-        val bitmap = Bitmap.decode(bytes.copyOfRange(4, 12))
-        require(bitmap == Bitmap.of(2, 4, 11)) { "Unexpected fields found in bitmap $bitmap" }
-        var offset = 12
+        val bitmap = Bitmap.decode(bytes.copyOfRange(BITMAP_OFFSET, PAN_LENGTH_PREFIX_OFFSET))
+        require(bitmap == Bitmap.of(DE_2_PAN, DE_4_AMOUNT, DE_11_STAN)) { "Unexpected fields found in bitmap $bitmap" }
 
-        val panLength = String(bytes, offset, 2, US_ASCII).toInt()
-        offset += 2
-        val pan = String(bytes, offset, panLength, US_ASCII)
+        val panLengthPrefix = String(bytes, PAN_LENGTH_PREFIX_OFFSET, PAN_LENGTH_PREFIX_LENGTH, US_ASCII)
+        requireAsciiDigits(panLengthPrefix, "PAN length prefix")
+        val panLength = panLengthPrefix.toInt()
+        require(panLength in 1..PAN_MAX_LENGTH) { "PAN length prefix must be between 1 and $PAN_MAX_LENGTH, was $panLength" }
+        val panOffset = PAN_LENGTH_PREFIX_OFFSET + PAN_LENGTH_PREFIX_LENGTH
+        val amountOffset = panOffset + panLength
+        val stanOffset = amountOffset + AMOUNT_FIELD_LENGTH
+        val expectedLength = stanOffset + STAN_FIELD_LENGTH
+        require(bytes.size == expectedLength) {
+            "Request must be exactly $expectedLength bytes for PAN length $panLength, was ${bytes.size}"
+        }
+
+        val pan = String(bytes, panOffset, panLength, US_ASCII)
         requireAsciiDigits(pan, "PAN")
-        offset += panLength
 
-        val amountField = String(bytes, offset, 12, US_ASCII)
+        val amountField = String(bytes, amountOffset, AMOUNT_FIELD_LENGTH, US_ASCII)
         requireAsciiDigits(amountField, "Amount")
         val amount = amountField.toLong()
-        offset += 12
 
-        val stan = String(bytes, offset, 6, US_ASCII)
+        val stan = String(bytes, stanOffset, STAN_FIELD_LENGTH, US_ASCII)
         requireAsciiDigits(stan, "STAN")
 
         return TransactionRequest(type = type, stan = stan, pan = pan, amount = amount)
