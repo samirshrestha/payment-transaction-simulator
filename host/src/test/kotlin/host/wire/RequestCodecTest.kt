@@ -183,4 +183,36 @@ class RequestCodecTest {
 
         assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
     }
+
+    @Test
+    fun `refuses to decode a well-formed request with trailing bytes appended`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII)
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII)
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val trailingGarbage = "EXTRA".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan + trailingGarbage
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a request truncated before the PAN length prefix`() {
+        val message = "0100".toByteArray(Charsets.US_ASCII) // MTI only, missing bitmap and beyond
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to decode a request truncated mid-STAN`() {
+        val mti = "0100".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII)
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII)
+        val truncatedStan = "0000".toByteArray(Charsets.US_ASCII) // STAN cut short: 4 of 6 bytes
+        val message = mti + bitmap + pan + amount + truncatedStan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
 }
