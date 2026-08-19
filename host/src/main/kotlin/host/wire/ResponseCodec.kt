@@ -1,12 +1,20 @@
 package host.wire
 
+import host.domain.DeclineReason
 import host.domain.TransactionResponse
 import java.nio.charset.StandardCharsets.US_ASCII
 
-/** Translates between wire bytes and [TransactionResponse]: MTI + DE11 (STAN) + DE39 (response code). */
+/**
+ * Translates between wire bytes and [TransactionResponse]: MTI + DE11 (STAN) + DE39 (response
+ * code). DE39 carries the published ISO 8583 code for the specific decline reason where one is
+ * known (51 Insufficient Funds, 14 Invalid Card Number for Invalid Account); a decline with no
+ * modeled reason falls back to the generic 05 (Do Not Honor).
+ */
 object ResponseCodec {
     private const val APPROVED_CODE = "00"
     private const val DECLINED_CODE = "05"
+    private const val INSUFFICIENT_FUNDS_CODE = "51"
+    private const val INVALID_ACCOUNT_CODE = "14"
 
     private const val DE_11_STAN = 11
     private const val DE_39_RESPONSE_CODE = 39
@@ -21,7 +29,15 @@ object ResponseCodec {
     private const val RESPONSE_CODE_OFFSET = STAN_OFFSET + STAN_FIELD_LENGTH
     private const val MESSAGE_LENGTH = RESPONSE_CODE_OFFSET + RESPONSE_CODE_LENGTH
 
-    private val ALLOWED_RESPONSE_CODES = listOf(APPROVED_CODE, DECLINED_CODE)
+    private val RESPONSE_CODE_BY_DECLINE_REASON = mapOf(
+        DeclineReason.INSUFFICIENT_FUNDS to INSUFFICIENT_FUNDS_CODE,
+        DeclineReason.INVALID_ACCOUNT to INVALID_ACCOUNT_CODE,
+    )
+    private val DECLINE_REASON_BY_RESPONSE_CODE =
+        RESPONSE_CODE_BY_DECLINE_REASON.entries.associate { (reason, code) -> code to reason }
+
+    private val ALLOWED_RESPONSE_CODES =
+        listOf(APPROVED_CODE, DECLINED_CODE) + RESPONSE_CODE_BY_DECLINE_REASON.values
     private val stanPatternRegEx = Regex("[0-9]{1,$STAN_FIELD_LENGTH}")   // input side: 1-6 digits, before padding
     private val stanFieldRegEx = Regex("[0-9]{$STAN_FIELD_LENGTH}")        // wire side: exactly 6 digits
 
@@ -31,7 +47,11 @@ object ResponseCodec {
         val mti = Mti.response(response.type)
         val bitmap = Bitmap.of(DE_11_STAN, DE_39_RESPONSE_CODE)
         val stanField = response.stan.padStart(STAN_FIELD_LENGTH, '0')
-        val responseCodeField = if (response.approved) APPROVED_CODE else DECLINED_CODE
+        val responseCodeField = when {
+            response.approved -> APPROVED_CODE
+            response.declineReason != null -> RESPONSE_CODE_BY_DECLINE_REASON.getValue(response.declineReason)
+            else -> DECLINED_CODE
+        }
 
         return mti.toByteArray(US_ASCII) +
                 bitmap.toBytes() +
@@ -57,7 +77,8 @@ object ResponseCodec {
         return TransactionResponse(
             type = type,
             stan = stan,
-            approved = responseCode == APPROVED_CODE
+            approved = responseCode == APPROVED_CODE,
+            declineReason = DECLINE_REASON_BY_RESPONSE_CODE[responseCode],
         )
     }
 }
