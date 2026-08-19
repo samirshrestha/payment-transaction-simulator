@@ -19,7 +19,7 @@ class StubTransactionProcessorTest {
         val response = processor.process(request)
 
         assertEquals(
-            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001", approved = true),
+            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001"),
             response,
         )
     }
@@ -36,7 +36,7 @@ class StubTransactionProcessorTest {
         val response = processor.process(request)
 
         assertEquals(
-            TransactionResponse(type = TransactionType.FINANCIAL, stan = "000002", approved = true),
+            TransactionResponse(type = TransactionType.FINANCIAL, stan = "000002"),
             response,
         )
     }
@@ -53,7 +53,7 @@ class StubTransactionProcessorTest {
         val response = processor.process(request)
 
         assertEquals(
-            TransactionResponse(type = TransactionType.REVERSAL, stan = "000003", approved = true),
+            TransactionResponse(type = TransactionType.REVERSAL, stan = "000003"),
             response,
         )
     }

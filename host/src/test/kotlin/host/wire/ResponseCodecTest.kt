@@ -21,21 +21,25 @@ class ResponseCodecTest {
         val response = ResponseCodec.decode(message)
 
         assertEquals(
-            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001", approved = true),
+            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001"),
             response,
         )
     }
 
     @Test
     fun `encodes a declined Financial response onto the wire`() {
-        val response = TransactionResponse(type = TransactionType.FINANCIAL, stan = "000042", approved = false)
+        val response = TransactionResponse(
+            type = TransactionType.FINANCIAL,
+            stan = "000042",
+            declineReason = DeclineReason.INSUFFICIENT_FUNDS,
+        )
 
         val encoded = ResponseCodec.encode(response)
 
         val expectedMti = "0210".toByteArray(Charsets.US_ASCII)
         val expectedBitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0)
         val expectedStan = "000042".toByteArray(Charsets.US_ASCII)
-        val expectedResponseCode = "05".toByteArray(Charsets.US_ASCII)
+        val expectedResponseCode = "51".toByteArray(Charsets.US_ASCII)
         val expected = expectedMti + expectedBitmap + expectedStan + expectedResponseCode
 
         assertContentEquals(expected, encoded)
@@ -46,7 +50,6 @@ class ResponseCodecTest {
         val response = TransactionResponse(
             type = TransactionType.AUTHORIZATION,
             stan = "000043",
-            approved = false,
             declineReason = DeclineReason.INSUFFICIENT_FUNDS,
         )
 
@@ -66,7 +69,6 @@ class ResponseCodecTest {
         val response = TransactionResponse(
             type = TransactionType.AUTHORIZATION,
             stan = "000044",
-            approved = false,
             declineReason = DeclineReason.INVALID_ACCOUNT,
         )
 
@@ -95,7 +97,6 @@ class ResponseCodecTest {
             TransactionResponse(
                 type = TransactionType.AUTHORIZATION,
                 stan = "000001",
-                approved = false,
                 declineReason = DeclineReason.INSUFFICIENT_FUNDS,
             ),
             response,
@@ -116,7 +117,6 @@ class ResponseCodecTest {
             TransactionResponse(
                 type = TransactionType.AUTHORIZATION,
                 stan = "000001",
-                approved = false,
                 declineReason = DeclineReason.INVALID_ACCOUNT,
             ),
             response,
@@ -124,19 +124,14 @@ class ResponseCodecTest {
     }
 
     @Test
-    fun `decodes response code 05 into a decline with no decline reason`() {
+    fun `refuses to decode response code 05 -- no domain reason is modeled for a generic decline`() {
         val mti = "0110".toByteArray(Charsets.US_ASCII)
         val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
         val stan = "000001".toByteArray(Charsets.US_ASCII)
         val responseCode = "05".toByteArray(Charsets.US_ASCII)
         val message = mti + bitmap + stan + responseCode
 
-        val response = ResponseCodec.decode(message)
-
-        assertEquals(
-            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001", approved = false),
-            response,
-        )
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
     }
 
     @Test
@@ -144,7 +139,6 @@ class ResponseCodecTest {
         val response = TransactionResponse(
             type = TransactionType.FINANCIAL,
             stan = "000099",
-            approved = false,
             declineReason = DeclineReason.INSUFFICIENT_FUNDS,
         )
 
@@ -155,14 +149,14 @@ class ResponseCodecTest {
 
     @Test
     fun `refuses to encode a STAN that doesn't fit the fixed 6-digit field`() {
-        val response = TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "1234567", approved = true)
+        val response = TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "1234567")
 
         assertFailsWith<IllegalArgumentException> { ResponseCodec.encode(response) }
     }
 
     @Test
     fun `refuses to encode a non-numeric STAN`() {
-        val response = TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "12a456", approved = true)
+        val response = TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "12a456")
 
         assertFailsWith<IllegalArgumentException> { ResponseCodec.encode(response) }
     }

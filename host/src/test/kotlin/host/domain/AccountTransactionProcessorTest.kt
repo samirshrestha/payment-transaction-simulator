@@ -22,7 +22,7 @@ class AccountTransactionProcessorTest {
         val response = processor.process(request)
 
         assertEquals(
-            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001", approved = true),
+            TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001"),
             response,
         )
         assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 3_000L), accounts.find(knownPan))
@@ -45,7 +45,6 @@ class AccountTransactionProcessorTest {
             TransactionResponse(
                 type = TransactionType.AUTHORIZATION,
                 stan = "000002",
-                approved = false,
                 declineReason = DeclineReason.INSUFFICIENT_FUNDS,
             ),
             response,
@@ -71,7 +70,6 @@ class AccountTransactionProcessorTest {
             TransactionResponse(
                 type = TransactionType.AUTHORIZATION,
                 stan = "000003",
-                approved = false,
                 declineReason = DeclineReason.INVALID_ACCOUNT,
             ),
             response,

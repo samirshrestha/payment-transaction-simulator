@@ -15,13 +15,8 @@ class AccountTransactionProcessor(private val accounts: AccountStore) : Transact
     private fun authorize(request: TransactionRequest): TransactionResponse =
         when (val outcome = accounts.authorize(request.pan, request.amount)) {
             is AuthorizationOutcome.Approved ->
-                TransactionResponse(type = request.type, stan = request.stan, approved = true)
+                TransactionResponse(type = request.type, stan = request.stan)
             is AuthorizationOutcome.Declined ->
-                TransactionResponse(
-                    type = request.type,
-                    stan = request.stan,
-                    approved = false,
-                    declineReason = outcome.reason,
-                )
+                TransactionResponse(type = request.type, stan = request.stan, declineReason = outcome.reason)
         }
 }
