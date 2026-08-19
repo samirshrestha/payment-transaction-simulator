@@ -64,7 +64,9 @@ POS-to-terminal protocol.
 
 \- Discipline for every feature: propose an approach -> let me question/challenge it ->
 
-&#x20; implement -> add solid test coverage -> manual testing -> only then automate the PR step.
+&#x20; implement -> add solid test coverage -> manual testing -> check whether README,
+
+&#x20; CONTEXT.md, or ADRs need updating for this change -> only then automate the PR step.
 
 \- Pairing split (agreed after ticket #5): mechanical scaffolding (build config, directory setup,
 
