@@ -9,6 +9,12 @@ interface AccountStore {
 
     /** Moves `amount` directly against the Account's balance; never touches the limit. */
     fun financial(pan: String, amount: Long): AccountOutcome
+
+    /** Undoes a prior [authorize] call: restores `amount` to the limit; never touches the balance. */
+    fun releaseAuthorization(pan: String, amount: Long): Account
+
+    /** Undoes a prior [financial] debit: restores `amount` to the balance; never touches the limit. */
+    fun restoreBalance(pan: String, amount: Long): Account
 }
 
 /** Outcome of an Account-store decision, shared by Authorization and Financial. */
