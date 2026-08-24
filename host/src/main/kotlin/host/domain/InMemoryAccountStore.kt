@@ -16,6 +16,26 @@ class InMemoryAccountStore(accounts: Collection<Account> = emptyList()) : Accoun
             account.copy(balance = account.balance - moved)
         }
 
+    override fun releaseAuthorization(pan: String, amount: Long): Account =
+        reverse(pan, amount) { it.copy(limit = it.limit + amount) }
+
+    override fun restoreBalance(pan: String, amount: Long): Account =
+        reverse(pan, amount) { it.copy(balance = it.balance + amount) }
+
+    /**
+     * Reversal never declines: the PAN is only ever reached here via a STAN that a prior
+     * [authorize]/[financial] call already proved valid, so an unknown PAN would be an invariant
+     * violation, not a domain outcome.
+     */
+    private fun reverse(pan: String, amount: Long, apply: (Account) -> Account): Account {
+        require(amount >= 0) { "amount must be non-negative, was $amount" }
+
+        val account = requireNotNull(accountsByPan[pan]) { "Cannot reverse unknown PAN $pan" }
+        val updated = apply(account)
+        accountsByPan[pan] = updated
+        return updated
+    }
+
     /**
      * Shared Account-store decisioning: unknown PAN declines Invalid Account, `amount` exceeding
      * `available` declines Insufficient Funds, otherwise `apply` commits the mutation.

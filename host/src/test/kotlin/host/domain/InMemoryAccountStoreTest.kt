@@ -108,4 +108,54 @@ class InMemoryAccountStoreTest {
         assertFailsWith<IllegalArgumentException> { store.financial(knownPan, -500L) }
         assertEquals(Account(pan = knownPan, balance = 1_000L, limit = 5_000L), store.find(knownPan))
     }
+
+    @Test
+    fun `releaseAuthorization restores the amount to the limit, leaving the balance untouched`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 3_000L)))
+
+        val account = store.releaseAuthorization(knownPan, 2_000L)
+
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), account)
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), store.find(knownPan))
+    }
+
+    @Test
+    fun `releaseAuthorization on an unknown PAN fails instead of silently succeeding`() {
+        val store = InMemoryAccountStore()
+
+        assertFailsWith<IllegalArgumentException> { store.releaseAuthorization("9999999999999999", 500L) }
+    }
+
+    @Test
+    fun `releaseAuthorization refuses a negative amount instead of silently decreasing the limit`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 3_000L)))
+
+        assertFailsWith<IllegalArgumentException> { store.releaseAuthorization(knownPan, -500L) }
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 3_000L), store.find(knownPan))
+    }
+
+    @Test
+    fun `restoreBalance restores the amount to the balance, leaving the limit untouched`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 8_000L, limit = 5_000L)))
+
+        val account = store.restoreBalance(knownPan, 2_000L)
+
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), account)
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), store.find(knownPan))
+    }
+
+    @Test
+    fun `restoreBalance on an unknown PAN fails instead of silently succeeding`() {
+        val store = InMemoryAccountStore()
+
+        assertFailsWith<IllegalArgumentException> { store.restoreBalance("9999999999999999", 500L) }
+    }
+
+    @Test
+    fun `restoreBalance refuses a negative amount instead of silently decreasing the balance`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 8_000L, limit = 5_000L)))
+
+        assertFailsWith<IllegalArgumentException> { store.restoreBalance(knownPan, -500L) }
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), store.find(knownPan))
+    }
 }

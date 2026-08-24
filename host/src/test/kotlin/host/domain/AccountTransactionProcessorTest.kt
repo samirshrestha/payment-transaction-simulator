@@ -2,6 +2,7 @@ package host.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class AccountTransactionProcessorTest {
@@ -174,5 +175,79 @@ class AccountTransactionProcessorTest {
         val response = processor.process(request)
 
         assertNull(response.declineReason)
+    }
+
+    @Test
+    fun `a Reversal of an Authorization's STAN releases the Authorization, leaving the balance untouched`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000009", pan = knownPan, amount = 2_000L),
+        )
+
+        val response = processor.process(
+            TransactionRequest(type = TransactionType.REVERSAL, stan = "000009", pan = knownPan, amount = 2_000L),
+        )
+
+        assertEquals(TransactionResponse(type = TransactionType.REVERSAL, stan = "000009"), response)
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a Reversal of a Financial's STAN restores the debited balance, leaving the limit untouched`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.FINANCIAL, stan = "000010", pan = knownPan, amount = 2_000L),
+        )
+
+        val response = processor.process(
+            TransactionRequest(type = TransactionType.REVERSAL, stan = "000010", pan = knownPan, amount = 2_000L),
+        )
+
+        assertEquals(TransactionResponse(type = TransactionType.REVERSAL, stan = "000010"), response)
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a Reversal carries no decline reason`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000011", pan = knownPan, amount = 2_000L),
+        )
+
+        val response = processor.process(
+            TransactionRequest(type = TransactionType.REVERSAL, stan = "000011", pan = knownPan, amount = 2_000L),
+        )
+
+        assertNull(response.declineReason)
+    }
+
+    @Test
+    fun `a Reversal referencing an unknown STAN fails instead of silently succeeding`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(type = TransactionType.REVERSAL, stan = "999999", pan = knownPan, amount = 2_000L),
+            )
+        }
+    }
+
+    @Test
+    fun `a Reversal of a declined Authorization's STAN fails since there is no hold to release`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 1_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000012", pan = knownPan, amount = 2_000L),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(type = TransactionType.REVERSAL, stan = "000012", pan = knownPan, amount = 2_000L),
+            )
+        }
     }
 }
