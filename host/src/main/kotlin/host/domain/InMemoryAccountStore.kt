@@ -6,18 +6,37 @@ class InMemoryAccountStore(accounts: Collection<Account> = emptyList()) : Accoun
 
     override fun find(pan: String): Account? = accountsByPan[pan]
 
-    override fun authorize(pan: String, amount: Long): AuthorizationOutcome {
+    override fun authorize(pan: String, amount: Long): AccountOutcome =
+        decide(pan, amount, available = Account::limit) { account, held ->
+            account.copy(limit = account.limit - held)
+        }
+
+    override fun financial(pan: String, amount: Long): AccountOutcome =
+        decide(pan, amount, available = Account::balance) { account, moved ->
+            account.copy(balance = account.balance - moved)
+        }
+
+    /**
+     * Shared Account-store decisioning: unknown PAN declines Invalid Account, `amount` exceeding
+     * `available` declines Insufficient Funds, otherwise `apply` commits the mutation.
+     */
+    private inline fun decide(
+        pan: String,
+        amount: Long,
+        available: (Account) -> Long,
+        apply: (Account, Long) -> Account,
+    ): AccountOutcome {
         require(amount >= 0) { "amount must be non-negative, was $amount" }
 
         val account = accountsByPan[pan]
-            ?: return AuthorizationOutcome.Declined(DeclineReason.INVALID_ACCOUNT)
+            ?: return AccountOutcome.Declined(DeclineReason.INVALID_ACCOUNT)
 
-        if (amount > account.limit) {
-            return AuthorizationOutcome.Declined(DeclineReason.INSUFFICIENT_FUNDS)
+        if (amount > available(account)) {
+            return AccountOutcome.Declined(DeclineReason.INSUFFICIENT_FUNDS)
         }
 
-        val held = account.copy(limit = account.limit - amount)
-        accountsByPan[pan] = held
-        return AuthorizationOutcome.Approved(held)
+        val updated = apply(account, amount)
+        accountsByPan[pan] = updated
+        return AccountOutcome.Approved(updated)
     }
 }

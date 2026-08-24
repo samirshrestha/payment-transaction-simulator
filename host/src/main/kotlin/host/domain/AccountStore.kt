@@ -5,10 +5,14 @@ interface AccountStore {
     fun find(pan: String): Account?
 
     /** Holds `amount` against the Account's limit; never moves the balance. */
-    fun authorize(pan: String, amount: Long): AuthorizationOutcome
+    fun authorize(pan: String, amount: Long): AccountOutcome
+
+    /** Moves `amount` directly against the Account's balance; never touches the limit. */
+    fun financial(pan: String, amount: Long): AccountOutcome
 }
 
-sealed interface AuthorizationOutcome {
-    data class Approved(val account: Account) : AuthorizationOutcome
-    data class Declined(val reason: DeclineReason) : AuthorizationOutcome
+/** Outcome of an Account-store decision, shared by Authorization and Financial. */
+sealed interface AccountOutcome {
+    data class Approved(val account: Account) : AccountOutcome
+    data class Declined(val reason: DeclineReason) : AccountOutcome
 }

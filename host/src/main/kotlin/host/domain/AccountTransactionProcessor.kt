@@ -1,22 +1,22 @@
 package host.domain
 
 /**
- * Real Account-store decisioning for the domain seam ([TransactionProcessor]). Authorization is
- * implemented here; Financial (#7) and Reversal (#8) land in later tickets.
+ * Real Account-store decisioning for the domain seam ([TransactionProcessor]). Authorization and
+ * Financial are implemented here; Reversal (#8) lands in a later ticket.
  */
 class AccountTransactionProcessor(private val accounts: AccountStore) : TransactionProcessor {
 
     override fun process(request: TransactionRequest): TransactionResponse = when (request.type) {
-        TransactionType.AUTHORIZATION -> authorize(request)
-        TransactionType.FINANCIAL, TransactionType.REVERSAL ->
-            error("${request.type} is not yet implemented by AccountTransactionProcessor")
+        TransactionType.AUTHORIZATION -> respond(request, accounts.authorize(request.pan, request.amount))
+        TransactionType.FINANCIAL -> respond(request, accounts.financial(request.pan, request.amount))
+        TransactionType.REVERSAL -> error("${request.type} is not yet implemented by AccountTransactionProcessor")
     }
 
-    private fun authorize(request: TransactionRequest): TransactionResponse =
-        when (val outcome = accounts.authorize(request.pan, request.amount)) {
-            is AuthorizationOutcome.Approved ->
+    private fun respond(request: TransactionRequest, outcome: AccountOutcome): TransactionResponse =
+        when (outcome) {
+            is AccountOutcome.Approved ->
                 TransactionResponse(type = request.type, stan = request.stan)
-            is AuthorizationOutcome.Declined ->
+            is AccountOutcome.Declined ->
                 TransactionResponse(type = request.type, stan = request.stan, declineReason = outcome.reason)
         }
 }
