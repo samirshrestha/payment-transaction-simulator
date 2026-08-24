@@ -44,10 +44,18 @@ class AccountTransactionProcessor(private val accounts: AccountStore) : Transact
             TransactionResponse(type = request.type, stan = request.stan, declineReason = outcome.reason)
     }
 
-    /** Reversal never declines: it undoes whatever the target STAN's own request did. */
+    /**
+     * Reversal never declines: it undoes whatever the target STAN's own request did. Per ISO
+     * 8583, DE2/DE4 on the Reversal message must match the original transaction Host recorded
+     * for that STAN — a mismatch is an invariant violation, not a domain outcome.
+     */
     private fun reverse(request: TransactionRequest): TransactionResponse {
         val target = requireNotNull(reversibleByStan[request.stan]) {
             "Reversal references unknown STAN '${request.stan}'"
+        }
+        require(request.pan == target.pan && request.amount == target.amount) {
+            "Reversal for STAN '${request.stan}' does not match the recorded transaction " +
+                "(expected pan=${target.pan} amount=${target.amount}, got pan=${request.pan} amount=${request.amount})"
         }
         when (target) {
             is Reversible.Authorization -> accounts.releaseAuthorization(target.pan, target.amount)

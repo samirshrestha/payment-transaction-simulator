@@ -250,4 +250,42 @@ class AccountTransactionProcessorTest {
             )
         }
     }
+
+    @Test
+    fun `a Reversal with an amount that doesn't match the recorded transaction fails instead of reversing the wrong amount`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000013", pan = knownPan, amount = 2_000L),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(type = TransactionType.REVERSAL, stan = "000013", pan = knownPan, amount = 9_999L),
+            )
+        }
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 3_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a Reversal with a PAN that doesn't match the recorded transaction fails instead of reversing the wrong account`() {
+        val otherPan = "5555555555554444"
+        val accounts = InMemoryAccountStore(
+            listOf(
+                Account(pan = knownPan, balance = 10_000L, limit = 5_000L),
+                Account(pan = otherPan, balance = 10_000L, limit = 5_000L),
+            ),
+        )
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000014", pan = knownPan, amount = 2_000L),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(type = TransactionType.REVERSAL, stan = "000014", pan = otherPan, amount = 2_000L),
+            )
+        }
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 3_000L), accounts.find(knownPan))
+    }
 }
