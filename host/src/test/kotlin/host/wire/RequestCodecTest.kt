@@ -98,6 +98,91 @@ class RequestCodecTest {
     }
 
     @Test
+    fun `encodes a Financial Advice request with a distinct MTI from the online Financial request`() {
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000042",
+            pan = "5555555555554444",
+            amount = 500L,
+            advice = true,
+        )
+
+        val encoded = RequestCodec.encode(request)
+
+        val expectedMti = "0220".toByteArray(Charsets.US_ASCII)
+        val expectedBitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0)
+        val expectedPan = "165555555555554444".toByteArray(Charsets.US_ASCII)
+        val expectedAmount = "000000000500".toByteArray(Charsets.US_ASCII)
+        val expectedStan = "000042".toByteArray(Charsets.US_ASCII)
+        val expected = expectedMti + expectedBitmap + expectedPan + expectedAmount + expectedStan
+
+        assertContentEquals(expected, encoded)
+    }
+
+    @Test
+    fun `decodes a well-formed Financial Advice request`() {
+        val mti = "0220".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "165555555555554444".toByteArray(Charsets.US_ASCII)
+        val amount = "000000000500".toByteArray(Charsets.US_ASCII)
+        val stan = "000042".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        val request = RequestCodec.decode(message)
+
+        assertEquals(
+            TransactionRequest(
+                type = TransactionType.FINANCIAL,
+                stan = "000042",
+                pan = "5555555555554444",
+                amount = 500L,
+                advice = true,
+            ),
+            request,
+        )
+    }
+
+    @Test
+    fun `round-trips a Financial Advice request through encode and decode`() {
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000043",
+            pan = "5555555555554444",
+            amount = 500L,
+            advice = true,
+        )
+
+        val decoded = RequestCodec.decode(RequestCodec.encode(request))
+
+        assertEquals(request, decoded)
+    }
+
+    @Test
+    fun `refuses to decode an Advice-flagged MTI for a non-Financial class digit`() {
+        val mti = "0120".toByteArray(Charsets.US_ASCII) // Authorization class digit, Advice function digit
+        val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present
+        val pan = "164111111111111111".toByteArray(Charsets.US_ASCII)
+        val amount = "000000012345".toByteArray(Charsets.US_ASCII)
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + pan + amount + stan
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to encode Advice on a non-Financial request`() {
+        val request = TransactionRequest(
+            type = TransactionType.AUTHORIZATION,
+            stan = "000001",
+            pan = "4111111111111111",
+            amount = 100L,
+            advice = true,
+        )
+
+        assertFailsWith<IllegalArgumentException> { RequestCodec.encode(request) }
+    }
+
+    @Test
     fun `refuses to decode Authorization request with bad-MTI`() {
         val mti = "0110".toByteArray(Charsets.US_ASCII)
         val bitmap = byteArrayOf(0x50, 0x20, 0, 0, 0, 0, 0, 0) // DE2, DE4, DE11 present

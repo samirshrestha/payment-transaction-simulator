@@ -41,7 +41,7 @@ object ResponseCodec {
     fun encode(response: TransactionResponse): ByteArray {
         require(stanPatternRegEx.matches(response.stan)) { "STAN must fit the fixed 6-digit only field (DE11), was '${response.stan}'" }
 
-        val mti = Mti.response(response.type)
+        val mti = Mti.response(response.type, response.advice)
         val bitmap = Bitmap.of(DE_11_STAN, DE_39_RESPONSE_CODE)
         val stanField = response.stan.padStart(STAN_FIELD_LENGTH, '0')
         val responseCodeField = response.declineReason
@@ -59,7 +59,10 @@ object ResponseCodec {
 
         val mti = String(bytes, 0, MTI_LENGTH, US_ASCII)
         val type = Mti.transactionType(mti)
-        require(mti == Mti.response(type)) { "Expected response MTI ${Mti.response(type)} for $type, but got $mti" }
+        val advice = Mti.isAdvice(mti)
+        require(mti == Mti.response(type, advice)) {
+            "Expected response MTI ${Mti.response(type, advice)} for $type, but got $mti"
+        }
         val bitmap = Bitmap.decode(bytes.copyOfRange(BITMAP_OFFSET, STAN_OFFSET))
         require(bitmap == Bitmap.of(DE_11_STAN, DE_39_RESPONSE_CODE)) { "Unexpected fields found in bitmap $bitmap" }
 
@@ -73,6 +76,7 @@ object ResponseCodec {
             type = type,
             stan = stan,
             declineReason = DECLINE_REASON_BY_RESPONSE_CODE[responseCode],
+            advice = advice,
         )
     }
 }

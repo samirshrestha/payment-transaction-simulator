@@ -17,20 +17,24 @@ class InMemoryAccountStore(accounts: Collection<Account> = emptyList()) : Accoun
         }
 
     override fun releaseAuthorization(pan: String, amount: Long): Account =
-        reverse(pan, amount) { it.copy(limit = it.limit + amount) }
+        unconditional(pan, amount) { it.copy(limit = it.limit + amount) }
 
     override fun restoreBalance(pan: String, amount: Long): Account =
-        reverse(pan, amount) { it.copy(balance = it.balance + amount) }
+        unconditional(pan, amount) { it.copy(balance = it.balance + amount) }
+
+    override fun financialAdvice(pan: String, amount: Long): Account =
+        unconditional(pan, amount) { it.copy(balance = it.balance - amount) }
 
     /**
-     * Reversal never declines: the PAN is only ever reached here via a STAN that a prior
-     * [authorize]/[financial] call already proved valid, so an unknown PAN would be an invariant
-     * violation, not a domain outcome.
+     * Applies an Account mutation that never declines: a Reversal undoing a transaction Host
+     * already recorded for the target STAN, or a Financial Advice reporting one Terminal already
+     * approved offline. Either way the PAN is expected to be one Host knows about; an unknown PAN
+     * is an invariant violation, not a domain outcome.
      */
-    private fun reverse(pan: String, amount: Long, apply: (Account) -> Account): Account {
+    private fun unconditional(pan: String, amount: Long, apply: (Account) -> Account): Account {
         require(amount >= 0) { "amount must be non-negative, was $amount" }
 
-        val account = requireNotNull(accountsByPan[pan]) { "Cannot reverse unknown PAN $pan" }
+        val account = requireNotNull(accountsByPan[pan]) { "Cannot apply unconditional mutation for unknown PAN $pan" }
         val updated = apply(account)
         accountsByPan[pan] = updated
         return updated

@@ -268,6 +268,117 @@ class AccountTransactionProcessorTest {
     }
 
     @Test
+    fun `a Financial Advice debits the balance the same way an online Financial does, leaving the limit untouched`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000015",
+            pan = knownPan,
+            amount = 2_000L,
+            advice = true,
+        )
+
+        val response = processor.process(request)
+
+        assertEquals(
+            TransactionResponse(type = TransactionType.FINANCIAL, stan = "000015", advice = true),
+            response,
+        )
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a Financial Advice that would push the balance negative is applied as-is instead of declining`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 1_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000016",
+            pan = knownPan,
+            amount = 2_000L,
+            advice = true,
+        )
+
+        val response = processor.process(request)
+
+        assertEquals(
+            TransactionResponse(type = TransactionType.FINANCIAL, stan = "000016", advice = true),
+            response,
+        )
+        assertEquals(Account(pan = knownPan, balance = -1_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a Financial Advice for an unknown PAN fails instead of silently succeeding`() {
+        val accounts = InMemoryAccountStore()
+        val processor = AccountTransactionProcessor(accounts)
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000017",
+            pan = "9999999999999999",
+            amount = 500L,
+            advice = true,
+        )
+
+        assertFailsWith<IllegalArgumentException> { processor.process(request) }
+    }
+
+    @Test
+    fun `a Financial Advice carries no decline reason`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        val request = TransactionRequest(
+            type = TransactionType.FINANCIAL,
+            stan = "000018",
+            pan = knownPan,
+            amount = 500L,
+            advice = true,
+        )
+
+        val response = processor.process(request)
+
+        assertNull(response.declineReason)
+    }
+
+    @Test
+    fun `Advice on a non-Financial type fails instead of being silently ignored`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        val request = TransactionRequest(
+            type = TransactionType.AUTHORIZATION,
+            stan = "000019",
+            pan = knownPan,
+            amount = 500L,
+            advice = true,
+        )
+
+        assertFailsWith<IllegalArgumentException> { processor.process(request) }
+    }
+
+    @Test
+    fun `a Reversal referencing a Financial Advice's STAN fails -- an Advice is repeated to recover, not reversed`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(
+                type = TransactionType.FINANCIAL,
+                stan = "000020",
+                pan = knownPan,
+                amount = 2_000L,
+                advice = true,
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(type = TransactionType.REVERSAL, stan = "000020", pan = knownPan, amount = 2_000L),
+            )
+        }
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
     fun `a Reversal with a PAN that doesn't match the recorded transaction fails instead of reversing the wrong account`() {
         val otherPan = "5555555555554444"
         val accounts = InMemoryAccountStore(

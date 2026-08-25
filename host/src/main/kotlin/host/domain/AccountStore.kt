@@ -15,6 +15,13 @@ interface AccountStore {
 
     /** Undoes a prior [financial] debit: restores `amount` to the balance; never touches the limit. */
     fun restoreBalance(pan: String, amount: Long): Account
+
+    /**
+     * Reports a Financial already approved offline by Terminal (Financial Advice): moves
+     * `amount` directly against the balance like [financial], but never declines — not even into
+     * a negative balance, since the offline sale already happened.
+     */
+    fun financialAdvice(pan: String, amount: Long): Account
 }
 
 /** Outcome of an Account-store decision, shared by Authorization and Financial. */
