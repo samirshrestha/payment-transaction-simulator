@@ -124,6 +124,64 @@ class ResponseCodecTest {
     }
 
     @Test
+    fun `encodes a Financial Advice response with a distinct MTI from the online Financial response`() {
+        val response = TransactionResponse(type = TransactionType.FINANCIAL, stan = "000042", advice = true)
+
+        val encoded = ResponseCodec.encode(response)
+
+        val expectedMti = "0230".toByteArray(Charsets.US_ASCII)
+        val expectedBitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0)
+        val expectedStan = "000042".toByteArray(Charsets.US_ASCII)
+        val expectedResponseCode = "00".toByteArray(Charsets.US_ASCII)
+        val expected = expectedMti + expectedBitmap + expectedStan + expectedResponseCode
+
+        assertContentEquals(expected, encoded)
+    }
+
+    @Test
+    fun `decodes a well-formed Financial Advice response`() {
+        val mti = "0230".toByteArray(Charsets.US_ASCII)
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "000042".toByteArray(Charsets.US_ASCII)
+        val responseCode = "00".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan + responseCode
+
+        val response = ResponseCodec.decode(message)
+
+        assertEquals(
+            TransactionResponse(type = TransactionType.FINANCIAL, stan = "000042", advice = true),
+            response,
+        )
+    }
+
+    @Test
+    fun `round-trips a Financial Advice response through encode and decode`() {
+        val response = TransactionResponse(type = TransactionType.FINANCIAL, stan = "000099", advice = true)
+
+        val decoded = ResponseCodec.decode(ResponseCodec.encode(response))
+
+        assertEquals(response, decoded)
+    }
+
+    @Test
+    fun `refuses to decode an Advice-flagged MTI for a non-Financial class digit`() {
+        val mti = "0130".toByteArray(Charsets.US_ASCII) // Authorization class digit, Advice-response function digit
+        val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present
+        val stan = "000001".toByteArray(Charsets.US_ASCII)
+        val responseCode = "00".toByteArray(Charsets.US_ASCII)
+        val message = mti + bitmap + stan + responseCode
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.decode(message) }
+    }
+
+    @Test
+    fun `refuses to encode Advice on a non-Financial response`() {
+        val response = TransactionResponse(type = TransactionType.AUTHORIZATION, stan = "000001", advice = true)
+
+        assertFailsWith<IllegalArgumentException> { ResponseCodec.encode(response) }
+    }
+
+    @Test
     fun `refuses to decode response code 05 -- no domain reason is modeled for a generic decline`() {
         val mti = "0110".toByteArray(Charsets.US_ASCII)
         val bitmap = byteArrayOf(0, 0x20, 0, 0, 2, 0, 0, 0) // DE11, DE39 present

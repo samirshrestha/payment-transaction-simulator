@@ -62,7 +62,7 @@ Domain modeling and architecture planning complete (see ADRs above). Implementat
 
 Starts a standalone TCP socket server on port `8583`, terminating one-way TLS with a self-signed dev certificate (checked into the repo at `host/src/main/resources/tls/host-keystore.p12`, password `changeit`) — see [ADR-0005](./docs/adr/0005-terminal-host-transport.md). This cert is for local dev only; it's not a real trust chain and shouldn't be treated as one.
 
-Real Account-based decisioning (per [ADR-0001](./docs/adr/0001-simulated-account-store-for-host-decisioning.md)) is implemented and tested at the domain layer for Authorization, Financial, and Reversal — but `Main.kt` still wires up a stub processor that approves every transaction unconditionally, so the running server doesn't exercise it yet. Wiring the real processor into the server is tracked as part of [issue #1](https://github.com/samirshrestha/payment-transaction-simulator/issues/1).
+Real Account-based decisioning (per [ADR-0001](./docs/adr/0001-simulated-account-store-for-host-decisioning.md)) is implemented and tested at the domain layer for Authorization, Financial (online and offline-approved Financial Advice, per [ADR-0004](./docs/adr/0004-floor-limit-offline-financial-advice.md)), and Reversal — but `Main.kt` still wires up a stub processor that approves every transaction unconditionally, so the running server doesn't exercise it yet. Wiring the real processor into the server is tracked as part of [issue #1](https://github.com/samirshrestha/payment-transaction-simulator/issues/1).
 
 Work is tracked as [GitHub Issues](https://github.com/samirshrestha/payment-transaction-simulator/issues) and on the [Project board](https://github.com/users/samirshrestha/projects/1).
 

@@ -158,4 +158,39 @@ class InMemoryAccountStoreTest {
         assertFailsWith<IllegalArgumentException> { store.restoreBalance(knownPan, -500L) }
         assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), store.find(knownPan))
     }
+
+    @Test
+    fun `financialAdvice moves an amount directly against the balance, leaving the limit untouched`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+
+        val account = store.financialAdvice(knownPan, 2_000L)
+
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), account)
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), store.find(knownPan))
+    }
+
+    @Test
+    fun `financialAdvice applies an amount exceeding the balance, pushing it negative instead of declining`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 1_000L, limit = 5_000L)))
+
+        val account = store.financialAdvice(knownPan, 2_000L)
+
+        assertEquals(Account(pan = knownPan, balance = -1_000L, limit = 5_000L), account)
+        assertEquals(Account(pan = knownPan, balance = -1_000L, limit = 5_000L), store.find(knownPan))
+    }
+
+    @Test
+    fun `financialAdvice on an unknown PAN fails instead of silently succeeding`() {
+        val store = InMemoryAccountStore()
+
+        assertFailsWith<IllegalArgumentException> { store.financialAdvice("9999999999999999", 500L) }
+    }
+
+    @Test
+    fun `financialAdvice refuses a negative amount instead of silently increasing the balance`() {
+        val store = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 1_000L, limit = 5_000L)))
+
+        assertFailsWith<IllegalArgumentException> { store.financialAdvice(knownPan, -500L) }
+        assertEquals(Account(pan = knownPan, balance = 1_000L, limit = 5_000L), store.find(knownPan))
+    }
 }

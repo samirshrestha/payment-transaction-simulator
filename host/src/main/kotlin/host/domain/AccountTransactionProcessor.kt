@@ -5,9 +5,11 @@ class AccountTransactionProcessor(private val accounts: AccountStore) : Transact
 
     /**
      * STAN -> what a Reversal targeting it must undo, per `host/CONTEXT.md`'s STAN entry: valid
-     * indefinitely for the process lifetime. Only an approved Authorization or Financial is ever
-     * recorded — a Reversal carries the target's STAN rather than one of its own, so it's never
-     * recorded here itself, and this type has no variant for it.
+     * indefinitely for the process lifetime. Only an approved Authorization or online Financial
+     * is ever recorded — a Financial Advice isn't a valid Reversal target at all (per ADR-0004,
+     * Terminal recovers a lost Advice ack by repeating the same Advice, not by reversing it), and
+     * a Reversal carries the target's STAN rather than one of its own, so it's never recorded
+     * here itself — neither has a variant here.
      */
     private sealed interface Reversible {
         val pan: String
@@ -19,16 +21,29 @@ class AccountTransactionProcessor(private val accounts: AccountStore) : Transact
 
     private val reversibleByStan = mutableMapOf<String, Reversible>()
 
-    override fun process(request: TransactionRequest): TransactionResponse = when (request.type) {
-        TransactionType.AUTHORIZATION ->
-            respond(request, accounts.authorize(request.pan, request.amount)) {
-                Reversible.Authorization(request.pan, request.amount)
-            }
-        TransactionType.FINANCIAL ->
-            respond(request, accounts.financial(request.pan, request.amount)) {
-                Reversible.Financial(request.pan, request.amount)
-            }
-        TransactionType.REVERSAL -> reverse(request)
+    override fun process(request: TransactionRequest): TransactionResponse {
+        requireAdviceIsFinancial(request.type, request.advice)
+        return when (request.type) {
+            TransactionType.AUTHORIZATION ->
+                respond(request, accounts.authorize(request.pan, request.amount)) {
+                    Reversible.Authorization(request.pan, request.amount)
+                }
+            TransactionType.FINANCIAL ->
+                if (request.advice) advise(request)
+                else respond(request, accounts.financial(request.pan, request.amount)) {
+                    Reversible.Financial(request.pan, request.amount)
+                }
+            TransactionType.REVERSAL -> reverse(request)
+        }
+    }
+
+    /**
+     * Financial Advice never declines, per `host/CONTEXT.md`'s Financial Advice entry — it just
+     * applies the Account change.
+     */
+    private fun advise(request: TransactionRequest): TransactionResponse {
+        accounts.financialAdvice(request.pan, request.amount)
+        return TransactionResponse(type = request.type, stan = request.stan, advice = true)
     }
 
     private fun respond(
