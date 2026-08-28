@@ -16,9 +16,12 @@ internal val DEMO_ACCOUNTS = listOf(
     Account(pan = "5500000000000004", balance = 500L, limit = 500L),
 )
 
+/** Builds the server with the same wiring `main` runs in production, so tests can exercise it directly. */
+internal fun createHostServer(port: Int): HostServer =
+    HostServer(port = port, processor = AccountTransactionProcessor(InMemoryAccountStore(DEMO_ACCOUNTS)))
+
 fun main() {
-    val processor = AccountTransactionProcessor(InMemoryAccountStore(DEMO_ACCOUNTS))
-    val server = HostServer(port = DEFAULT_PORT, processor = processor)
+    val server = createHostServer(DEFAULT_PORT)
     Runtime.getRuntime().addShutdownHook(Thread { server.close() })
 
     server.start()

@@ -1,8 +1,6 @@
 package host
 
-import host.domain.AccountTransactionProcessor
 import host.domain.DeclineReason
-import host.domain.InMemoryAccountStore
 import host.domain.TransactionRequest
 import host.domain.TransactionType
 import host.transport.DevTls
@@ -21,16 +19,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Exercises the real wiring [Main.kt][main] uses in production -- [AccountTransactionProcessor]
- * backed by an [InMemoryAccountStore] seeded with [DEMO_ACCOUNTS] -- over a real TLS socket, to
- * confirm the running server is live end-to-end (not the [StubTransactionProcessor][host.domain.StubTransactionProcessor]
- * `HostServerTest` uses to isolate transport concerns).
+ * Exercises the same [createHostServer] wiring [main] runs in production over a real TLS socket,
+ * to confirm the running server is live end-to-end (not the
+ * [StubTransactionProcessor][host.domain.StubTransactionProcessor] `HostServerTest` uses to
+ * isolate transport concerns).
  */
 class MainIntegrationTest {
 
     @Test
     fun `a demo Account with enough balance approves a Financial`() {
-        val server = HostServer(port = 0, processor = AccountTransactionProcessor(InMemoryAccountStore(DEMO_ACCOUNTS)))
+        val server = createHostServer(port = 0)
         server.start()
 
         server.use {
@@ -45,7 +43,7 @@ class MainIntegrationTest {
 
     @Test
     fun `a demo Account without enough balance declines a Financial as Insufficient Funds`() {
-        val server = HostServer(port = 0, processor = AccountTransactionProcessor(InMemoryAccountStore(DEMO_ACCOUNTS)))
+        val server = createHostServer(port = 0)
         server.start()
 
         server.use {
