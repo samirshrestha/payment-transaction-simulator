@@ -71,6 +71,26 @@ Real Account-based decisioning (per [ADR-0001](./docs/adr/0001-simulated-account
 
 Amounts on the wire (DE4) are minor units (cents). The first Account has enough balance/limit to approve typical test transactions; the second is intentionally thin, to demonstrate an Insufficient Funds decline. Any PAN not in this list declines as Invalid Account. See [`host/CONTEXT.md`](./host/CONTEXT.md#account).
 
+#### Manual test client
+
+With the Host server running, exercise it interactively from a second terminal without needing the Terminal app:
+
+```bash
+./gradlew host:manualTestClient
+```
+
+This opens a single TLS connection (same dev cert, held open for the whole session) and reads repeated commands from stdin:
+
+```text
+> FINANCIAL 4111111111111111 10000 1
+APPROVED
+> FINANCIAL 5500000000000004 1000 2
+DECLINED (INSUFFICIENT_FUNDS)
+> quit
+```
+
+Command shape: `TYPE PAN AMOUNT STAN [ADVICE] [REPEAT]` — `TYPE` is `AUTHORIZATION`, `FINANCIAL`, or `REVERSAL`; `AMOUNT` is in cents; the optional trailing flags send a Financial Advice and/or a repeated Reversal/Advice, in either order (see [`host/CONTEXT.md`](./host/CONTEXT.md) for what those mean). Type `quit` to exit. It calls `RequestCodec`/`ResponseCodec` directly, so it can't drift from the real wire format.
+
 Work is tracked as [GitHub Issues](https://github.com/samirshrestha/payment-transaction-simulator/issues) and on the [Project board](https://github.com/users/samirshrestha/projects/1).
 
 ## License

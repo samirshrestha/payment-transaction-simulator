@@ -9,11 +9,7 @@ import host.wire.RequestCodec
 import host.wire.ResponseCodec
 import java.io.DataInputStream
 import java.io.DataOutputStream
-import java.security.KeyStore
-import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLSocket
-import javax.net.ssl.SSLSocketFactory
-import javax.net.ssl.TrustManagerFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -57,7 +53,7 @@ class MainIntegrationTest {
     }
 
     private fun send(server: HostServer, request: TransactionRequest) =
-        (clientTlsSocketFactory().createSocket("localhost", server.boundPort) as SSLSocket).use { socket ->
+        (DevTls.clientSocketFactory().createSocket("localhost", server.boundPort) as SSLSocket).use { socket ->
             val output = DataOutputStream(socket.getOutputStream())
             val input = DataInputStream(socket.getInputStream())
 
@@ -71,18 +67,4 @@ class MainIntegrationTest {
             input.readFully(responseBytes)
             ResponseCodec.decode(responseBytes)
         }
-
-    private fun clientTlsSocketFactory(): SSLSocketFactory {
-        val trustStore = KeyStore.getInstance("PKCS12")
-        val trustStoreStream = MainIntegrationTest::class.java.getResourceAsStream("/tls/host-truststore.p12")
-            ?: error("Test truststore resource not found")
-        trustStoreStream.use { stream -> trustStore.load(stream, DevTls.KEYSTORE_PASSWORD.toCharArray()) }
-
-        val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-        trustManagerFactory.init(trustStore)
-
-        val sslContext = SSLContext.getInstance("TLS")
-        sslContext.init(null, trustManagerFactory.trustManagers, null)
-        return sslContext.socketFactory
-    }
 }
