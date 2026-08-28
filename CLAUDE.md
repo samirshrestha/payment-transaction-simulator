@@ -64,9 +64,15 @@ POS-to-terminal protocol.
 
 \- Discipline for every feature: propose an approach -> let me question/challenge it ->
 
-&#x20; implement -> add solid test coverage -> manual testing -> check whether README,
+&#x20; create a dedicated branch (never commit directly to `main`) -> implement -> add solid
 
-&#x20; CONTEXT.md, or ADRs need updating for this change -> only then automate the PR step.
+&#x20; test coverage -> manual testing -> check whether README, CONTEXT.md, or ADRs need
+
+&#x20; updating for this change -> only then automate the PR step. Branch names follow the
+
+&#x20; ticket, e.g. `10-host-retry-idempotency`, matching the PR-per-ticket pattern already in
+
+&#x20; git history.
 
 \- Pairing split (agreed after ticket #5): mechanical scaffolding (build config, directory setup,
 
