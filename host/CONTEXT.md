@@ -25,7 +25,7 @@ The umbrella entity Host tracks through a lifecycle. Has a type (Authorization, 
 _Avoid_: Message (that's a wire-format concept, not a domain one)
 
 **Account**:
-A simulated record Host holds per PAN, carrying a balance and a limit. Authorization holds funds against the limit without moving the balance; Financial moves the balance directly. This is what gives Host real approve/decline logic (insufficient funds, over limit) instead of an arbitrary rule. See [ADR-0001](../docs/adr/0001-simulated-account-store-for-host-decisioning.md).
+A simulated record Host holds per PAN, carrying a balance and a limit. Authorization holds funds against the limit without moving the balance; Financial moves the balance directly. This is what gives Host real approve/decline logic (insufficient funds, over limit) instead of an arbitrary rule. See [ADR-0001](../docs/adr/0001-simulated-account-store-for-host-decisioning.md). The running server (`Main.kt`) seeds a fixed set of demo Accounts for manual/Terminal testing -- PANs, balances, and limits are documented in the README's ["Running the Host simulator"](../README.md#running-the-host-simulator) section.
 _Avoid_: Card (Account is the record Host holds; the card itself isn't modeled)
 
 **STAN**:
