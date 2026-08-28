@@ -10,4 +10,10 @@ data class TransactionRequest(
      * offline — rather than the online request/response pair. Only defined for [TransactionType.FINANCIAL].
      */
     val advice: Boolean = false,
+    /**
+     * The ISO 8583 MTI's origin digit: true when Terminal is retrying a Reversal or Financial
+     * Advice it already sent under this same STAN (see `host/CONTEXT.md`'s Repeat Indicator
+     * entry). Only defined for [TransactionType.REVERSAL] or a Financial [advice].
+     */
+    val repeat: Boolean = false,
 )
