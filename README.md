@@ -81,7 +81,7 @@ With the Host server running, exercise it interactively from a second terminal w
 
 This opens a single TLS connection (same dev cert, held open for the whole session) and reads repeated commands from stdin:
 
-```
+```text
 > FINANCIAL 4111111111111111 10000 1
 APPROVED
 > FINANCIAL 5500000000000004 1000 2
