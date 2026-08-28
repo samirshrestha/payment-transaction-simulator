@@ -379,6 +379,200 @@ class AccountTransactionProcessorTest {
     }
 
     @Test
+    fun `a repeated Reversal re-acknowledges without releasing the Authorization's hold a second time`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000021", pan = knownPan, amount = 2_000L),
+        )
+        processor.process(
+            TransactionRequest(type = TransactionType.REVERSAL, stan = "000021", pan = knownPan, amount = 2_000L),
+        )
+
+        val response = processor.process(
+            TransactionRequest(
+                type = TransactionType.REVERSAL,
+                stan = "000021",
+                pan = knownPan,
+                amount = 2_000L,
+                repeat = true,
+            ),
+        )
+
+        assertEquals(TransactionResponse(type = TransactionType.REVERSAL, stan = "000021"), response)
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a repeated Reversal re-acknowledges without restoring a Financial's balance a second time`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.FINANCIAL, stan = "000022", pan = knownPan, amount = 2_000L),
+        )
+        processor.process(
+            TransactionRequest(type = TransactionType.REVERSAL, stan = "000022", pan = knownPan, amount = 2_000L),
+        )
+
+        val response = processor.process(
+            TransactionRequest(
+                type = TransactionType.REVERSAL,
+                stan = "000022",
+                pan = knownPan,
+                amount = 2_000L,
+                repeat = true,
+            ),
+        )
+
+        assertEquals(TransactionResponse(type = TransactionType.REVERSAL, stan = "000022"), response)
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a second Reversal for an already-reversed STAN without the Repeat Indicator fails`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(type = TransactionType.AUTHORIZATION, stan = "000023", pan = knownPan, amount = 2_000L),
+        )
+        processor.process(
+            TransactionRequest(type = TransactionType.REVERSAL, stan = "000023", pan = knownPan, amount = 2_000L),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(type = TransactionType.REVERSAL, stan = "000023", pan = knownPan, amount = 2_000L),
+            )
+        }
+        assertEquals(Account(pan = knownPan, balance = 10_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a repeated Financial Advice re-acknowledges without debiting the balance a second time`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(
+                type = TransactionType.FINANCIAL,
+                stan = "000024",
+                pan = knownPan,
+                amount = 2_000L,
+                advice = true,
+            ),
+        )
+
+        val response = processor.process(
+            TransactionRequest(
+                type = TransactionType.FINANCIAL,
+                stan = "000024",
+                pan = knownPan,
+                amount = 2_000L,
+                advice = true,
+                repeat = true,
+            ),
+        )
+
+        assertEquals(
+            TransactionResponse(type = TransactionType.FINANCIAL, stan = "000024", advice = true),
+            response,
+        )
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a second Financial Advice for an already-processed STAN without the Repeat Indicator fails`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(
+                type = TransactionType.FINANCIAL,
+                stan = "000025",
+                pan = knownPan,
+                amount = 2_000L,
+                advice = true,
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(
+                    type = TransactionType.FINANCIAL,
+                    stan = "000025",
+                    pan = knownPan,
+                    amount = 2_000L,
+                    advice = true,
+                ),
+            )
+        }
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `a repeated Financial Advice with a mismatched amount fails instead of re-acknowledging the wrong transaction`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+        processor.process(
+            TransactionRequest(
+                type = TransactionType.FINANCIAL,
+                stan = "000026",
+                pan = knownPan,
+                amount = 2_000L,
+                advice = true,
+            ),
+        )
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(
+                    type = TransactionType.FINANCIAL,
+                    stan = "000026",
+                    pan = knownPan,
+                    amount = 9_999L,
+                    advice = true,
+                    repeat = true,
+                ),
+            )
+        }
+        assertEquals(Account(pan = knownPan, balance = 8_000L, limit = 5_000L), accounts.find(knownPan))
+    }
+
+    @Test
+    fun `Repeat Indicator on an Authorization fails instead of being silently ignored`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(
+                    type = TransactionType.AUTHORIZATION,
+                    stan = "000027",
+                    pan = knownPan,
+                    amount = 500L,
+                    repeat = true,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `Repeat Indicator on an online Financial fails instead of being silently ignored`() {
+        val accounts = InMemoryAccountStore(listOf(Account(pan = knownPan, balance = 10_000L, limit = 5_000L)))
+        val processor = AccountTransactionProcessor(accounts)
+
+        assertFailsWith<IllegalArgumentException> {
+            processor.process(
+                TransactionRequest(
+                    type = TransactionType.FINANCIAL,
+                    stan = "000028",
+                    pan = knownPan,
+                    amount = 500L,
+                    repeat = true,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `a Reversal with a PAN that doesn't match the recorded transaction fails instead of reversing the wrong account`() {
         val otherPan = "5555555555554444"
         val accounts = InMemoryAccountStore(

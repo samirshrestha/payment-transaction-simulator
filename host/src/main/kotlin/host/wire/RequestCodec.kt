@@ -31,7 +31,7 @@ object RequestCodec {
         require(request.stan.length <= STAN_FIELD_LENGTH) { "STAN must fit the fixed 6-digit field (DE11), was '${request.stan}'" }
         require(request.amount in 0..999_999_999_999) { "Amount must fit the 12-digit field (DE4), was ${request.amount}" }
 
-        val mti = Mti.request(request.type, request.advice)
+        val mti = Mti.request(request.type, request.advice, request.repeat)
         val bitmap = Bitmap.of(DE_2_PAN, DE_4_AMOUNT, DE_11_STAN)
         val panField = request.pan.length.toString().padStart(PAN_LENGTH_PREFIX_LENGTH, '0') + request.pan
         val amountField = request.amount.toString().padStart(AMOUNT_FIELD_LENGTH, '0')
@@ -51,8 +51,9 @@ object RequestCodec {
         val mti = String(bytes, 0, MTI_LENGTH, US_ASCII)
         val type = Mti.transactionType(mti)
         val advice = Mti.isAdvice(mti)
-        require(mti == Mti.request(type, advice)) {
-            "Expected request MTI ${Mti.request(type, advice)} for $type, but got $mti"
+        val repeat = Mti.isRepeat(mti)
+        require(mti == Mti.request(type, advice, repeat)) {
+            "Expected request MTI ${Mti.request(type, advice, repeat)} for $type, but got $mti"
         }
         val bitmap = Bitmap.decode(bytes.copyOfRange(BITMAP_OFFSET, PAN_LENGTH_PREFIX_OFFSET))
         require(bitmap == Bitmap.of(DE_2_PAN, DE_4_AMOUNT, DE_11_STAN)) { "Unexpected fields found in bitmap $bitmap" }
@@ -79,6 +80,6 @@ object RequestCodec {
         val stan = String(bytes, stanOffset, STAN_FIELD_LENGTH, US_ASCII)
         requireAsciiDigits(stan, "STAN")
 
-        return TransactionRequest(type = type, stan = stan, pan = pan, amount = amount, advice = advice)
+        return TransactionRequest(type = type, stan = stan, pan = pan, amount = amount, advice = advice, repeat = repeat)
     }
 }
